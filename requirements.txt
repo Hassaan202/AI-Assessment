@@ -1,11 +1,12 @@
-flask==2.0.1
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.0+cpu
-torchvision==0.17.0+cpu
-pillow==9.5.0
-numpy==1.24.3
-python-dotenv==1.0.0
-google-generativeai==0.3.2
 setuptools>=65.5.1
 wheel>=0.38.0
+distutils-pytest>=0.0.2
+flask==2.0.1
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.0.0+cpu
+torchvision==0.15.1+cpu
+pillow>=9.0.0,<10.0.0
+numpy>=1.23.0,<1.25.0
+python-dotenv==1.0.0
+google-generativeai==0.3.2
 gunicorn==20.1.0
