@@ -1,0 +1,6 @@
+Flask>=2.0
+torch==2.0.0
+torchvision==0.15.0
+numpy<2.0
+pillow>=9.0
+google-generativeai>=0.3.0

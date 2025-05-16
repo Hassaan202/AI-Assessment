@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Disease Classifier</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header h1 {
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 0;
+        }
+        .instructions-panel {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .instructions-header {
+            padding: 15px 20px;
+            background-color: #2e7d32;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .instructions-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .instructions-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .instructions-content.expanded {
+            padding: 20px;
+            max-height: 2000px;
+        }
+        .instructions-content h4 {
+            color: #2e7d32;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin: 15px 0 10px 0;
+        }
+        .instructions-content h4:first-child {
+            margin-top: 0;
+        }
+        .instructions-content ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .instructions-content li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .instructions-content strong {
+            color: #2e7d32;
+        }
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .toggle-icon.expanded {
+            transform: rotate(180deg);
+        }
+        .upload-container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+        }
+        #imagePreview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 12px;
+            display: none;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .result-container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            display: none;
+        }
+        .progress-bar {
+            height: 12px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            background-color: #2e7d32;
+        }
+        .upload-btn {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .upload-btn:hover {
+            background-color: #1b5e20;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        #dragArea {
+            border: 2px dashed #2e7d32;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: rgba(46, 125, 50, 0.05);
+        }
+        #dragArea:hover, #dragArea.highlight {
+            border-color: #1b5e20;
+            background-color: rgba(46, 125, 50, 0.1);
+        }
+        #dragArea.shrink {
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        #dragArea.shrink svg {
+            width: 30px;
+            height: 30px;
+        }
+        #dragArea.shrink p {
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner-border {
+            color: #2e7d32;
+        }
+        .disease-info {
+            margin-top: 20px;
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+        .disease-info h5 {
+            color: #2e7d32;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .disease-info p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        .disease-info strong {
+            color: #1b5e20;
+        }
+        #mainPrediction {
+            color: #2e7d32;
+            font-weight: 600;
+        }
+        .result-container h3 {
+            color: #2e7d32;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .result-container h4 {
+            color: #1b5e20;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Plant Disease Classifier</h1>
+            <p>Upload an image of a plant leaf to identify diseases</p>
+        </div>
+        
+        <div class="instructions-panel">
+            <div class="instructions-header" id="instructionsToggle">
+                <h3>Instructions & Tips</h3>
+                <svg class="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                </svg>
+            </div>
+            <div class="instructions-content" id="instructionsContent">
+                <h4>About This App</h4>
+                <p>This application uses advanced AI to identify plant diseases from leaf images. It can help you:</p>
+                <ul>
+                    <li>Quickly identify common plant diseases</li>
+                    <li>Get detailed information about the detected disease</li>
+                    <li>Learn about symptoms and treatment options</li>
+                </ul>
+                
+                <h4>For Best Results</h4>
+                <p>To get the most accurate results, please ensure your image meets these requirements:</p>
+                <ul>
+                    <li><strong>Image Quality:</strong> Use a clear, well-lit photo</li>
+                    <li><strong>Focus:</strong> Capture a single leaf (preferred) or a small group of affected leaves</li>
+                    <li><strong>Resolution:</strong> Higher resolution images work better</li>
+                    <li><strong>Background:</strong> Try to have a neutral or contrasting background</li>
+                    <li><strong>Angle:</strong> Take the photo from directly above the leaf</li>
+                </ul>
+                
+                <h4>Supported Plants</h4>
+                <p>Currently, the app can identify diseases in:</p>
+                <ul>
+                    <li>Tomato plants</li>
+                    <li>Potato plants</li>
+                    <li>Pepper plants</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="upload-container">
+            <div id="dragArea">
+                <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" fill="#2e7d32" class="bi bi-cloud-arrow-up" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2z"/>
+                        <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/>
+                    </svg>
+                </div>
+                <div style="margin-top: 15px;">
+                    <p>Drag & drop image here or click to browse</p>
+                    <input type="file" id="fileInput" style="display: none;" accept="image/*">
+                    <button class="upload-btn" id="browseBtn">Browse Files</button>
+                </div>
+            </div>
+            
+            <div class="preview-container">
+                <img id="imagePreview" alt="Image Preview">
+                <button class="upload-btn" id="predictBtn" style="display: none;">Analyze Image</button>
+            </div>
+            
+            <div class="loading">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Analyzing image...</p>
+            </div>
+        </div>
+        
+        <div class="result-container" id="resultContainer">
+            <h3>Analysis Results</h3>
+            <div class="mb-3">
+                <h4>Diagnosis: <span id="mainPrediction" class="text-success"></span></h4>
+                <p>Confidence: <span id="confidenceValue"></span>%</p>
+            </div>
+            
+            <h5>Top 5 Predictions:</h5>
+            <div id="topPredictions">
+                <!-- Predictions will be inserted here -->
+            </div>
+            
+            <div class="disease-info" id="diseaseInfo">
+                <!-- Disease information will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dragArea = document.getElementById('dragArea');
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const imagePreview = document.getElementById('imagePreview');
+            const predictBtn = document.getElementById('predictBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const loadingIndicator = document.querySelector('.loading');
+            const mainPrediction = document.getElementById('mainPrediction');
+            const confidenceValue = document.getElementById('confidenceValue');
+            const topPredictions = document.getElementById('topPredictions');
+            const diseaseInfo = document.getElementById('diseaseInfo');
+            
+            // Disease information database
+            const diseaseDatabase = {
+                'Apple___Apple_scab': {
+                    description: 'Apple scab is a fungal disease caused by Venturia inaequalis that affects apple trees.',
+                    symptoms: 'Dark, scabby lesions on leaves and fruit. Infected leaves may drop prematurely.',
+                    treatment: 'Apply fungicides in early spring. Practice good sanitation by removing and destroying fallen leaves.'
+                },
+                'Apple___Black_rot': {
+                    description: 'Black rot is a fungal disease caused by Botryosphaeria obtusa affecting apple trees.',
+                    symptoms: 'Circular lesions on leaves and rotting fruit with concentric rings.',
+                    treatment: 'Prune out infected branches. Apply fungicides during the growing season. Remove mummified fruit.'
+                },
+                'Tomato___Late_blight': {
+                    description: 'Late blight is a devastating disease caused by Phytophthora infestans that affects tomatoes.',
+                    symptoms: 'Water-soaked spots on leaves that rapidly enlarge to form brown lesions. White fungal growth may appear on the undersides of leaves.',
+                    treatment: 'Apply fungicides preventatively. Ensure good air circulation. Remove and destroy infected plants.'
+                },
+                // Add more disease information as needed
+                'default': {
+                    description: 'Information about this specific plant condition is not available in our database.',
+                    symptoms: 'Please refer to a comprehensive plant disease guide for detailed information.',
+                    treatment: 'Consult with a local agricultural extension service for proper diagnosis and treatment options.'
+                }
+            };
+            
+            // Open file browser when browse button is clicked
+            browseBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            // Handle drag and drop events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dragArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dragArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dragArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                dragArea.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                dragArea.classList.remove('highlight');
+            }
+            
+            // Handle file drop
+            dragArea.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    handleFiles(files);
+                }
+            });
+            
+            // Handle file selection
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    handleFiles(this.files);
+                }
+            });
+            
+            // Process selected file
+            function handleFiles(files) {
+                const file = files[0];
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    predictBtn.style.display = 'block';
+                    resultContainer.style.display = 'none';
+                    
+                    // Shrink the drag area and update its content
+                    dragArea.classList.add('shrink');
+                    dragArea.innerHTML = `
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="#2e7d32" class="bi bi-cloud-arrow-up" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2z"/>
+                                <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p>Selected: ${file.name}</p>
+                            <button class="upload-btn" id="browseBtn">Browse Another File</button>
+                        </div>
+                    `;
+                    
+                    // Reattach click event to the new browse button
+                    document.getElementById('browseBtn').addEventListener('click', () => {
+                        fileInput.click();
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            // Submit image for prediction
+            predictBtn.addEventListener('click', async () => {
+                loadingIndicator.style.display = 'block';
+                predictBtn.disabled = true;
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.error) {
+                        alert(`Error: ${result.error}`);
+                        return;
+                    }
+                    
+                    displayResults(result);
+                } catch (error) {
+                    alert('An error occurred. Please try again.');
+                    console.error('Error:', error);
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                    predictBtn.disabled = false;
+                }
+            });
+            
+            // Display prediction results
+            function displayResults(result) {
+                // Display main prediction
+                mainPrediction.textContent = result.class.replace(/_/g, ' ').replace(/___/g, ' - ');
+                confidenceValue.textContent = result.confidence.toFixed(2);
+                
+                // Display top predictions
+                topPredictions.innerHTML = '';
+                result.top_predictions.forEach(pred => {
+                    const predName = pred.class.replace(/_/g, ' ').replace(/___/g, ' - ');
+                    const predDiv = document.createElement('div');
+                    predDiv.className = 'mb-2';
+                    predDiv.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">${predName}</div>
+                            <div class="ms-auto">${pred.confidence.toFixed(2)}%</div>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: ${pred.confidence}%" 
+                                aria-valuenow="${pred.confidence}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    `;
+                    topPredictions.appendChild(predDiv);
+                });
+                
+                // Fetch and display disease information from Gemini
+                fetch('/api/disease-info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        disease: result.class
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    diseaseInfo.innerHTML = `
+                        <h5>About this condition:</h5>
+                        <p><strong>Description:</strong> ${data.description}</p>
+                        <p><strong>Symptoms:</strong> ${data.symptoms}</p>
+                        <p><strong>Treatment:</strong> ${data.treatment}</p>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error fetching disease info:', error);
+                    diseaseInfo.innerHTML = `
+                        <h5>About this condition:</h5>
+                        <p>Unable to fetch detailed information at this time. Please try again later.</p>
+                    `;
+                });
+                
+                // Show results container
+                resultContainer.style.display = 'block';
+            }
+
+            // Add instructions panel toggle functionality
+            const instructionsToggle = document.getElementById('instructionsToggle');
+            const instructionsContent = document.getElementById('instructionsContent');
+            const toggleIcon = instructionsToggle.querySelector('.toggle-icon');
+            
+            instructionsToggle.addEventListener('click', () => {
+                instructionsContent.classList.toggle('expanded');
+                toggleIcon.classList.toggle('expanded');
+            });
+        });
+    </script>
+</body>
+</html>
