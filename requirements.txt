@@ -8,3 +8,4 @@ python-dotenv==1.0.0
 google-generativeai==0.3.2
 setuptools>=65.5.1
 wheel>=0.38.0
+gunicorn==20.1.0
