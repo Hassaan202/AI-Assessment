@@ -1,9 +1,6 @@
-setuptools==65.5.1
-wheel==0.38.0
-distutils-pytest>=0.0.2
 flask==2.0.1
 werkzeug==1.0.1
---extra-index-url https://download.pytorch.org/whl/cpu
+--find-links https://download.pytorch.org/whl/torch_stable.html
 torch==1.13.1+cpu
 torchvision==0.14.1+cpu
 pillow==9.5.0
