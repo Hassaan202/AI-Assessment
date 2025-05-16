@@ -1,3 +1,0 @@
-# This file tells Vercel what command to run when deploying
-pip install --upgrade pip setuptools wheel distutils-pytest
-pip install -r requirements.txt
