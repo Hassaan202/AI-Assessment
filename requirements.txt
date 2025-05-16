@@ -1,6 +1,7 @@
 flask==2.0.1
-torch==2.2.0
-torchvision==0.17.0
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==2.2.0+cpu
+torchvision==0.17.0+cpu
 pillow==9.5.0
 numpy==1.24.3
 python-dotenv==1.0.0
