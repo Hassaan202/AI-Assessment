@@ -11,10 +11,8 @@ import io
 import google.generativeai as genai
 import json
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Debug: Print API key status and environment
 print("\n=== Environment Debug ===")
 print(f"Current working directory: {os.getcwd()}")
 print(f"Environment variables loaded: {os.environ.get('GOOGLE_API_KEY') is not None}")
@@ -30,7 +28,6 @@ else:
 
 app = Flask(__name__)
 
-# Configure Gemini with explicit error handling
 try:
     genai.configure(api_key=api_key)
     print("Gemini configuration successful")
