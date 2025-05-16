@@ -1,0 +1,7 @@
+flask==2.0.1
+torch==2.0.1
+torchvision==0.15.2
+pillow==9.5.0
+python-dotenv==1.0.0
+google-generativeai==0.4.0
+gunicorn==21.2.0
