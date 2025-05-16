@@ -6,37 +6,12 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
 # Configuration
-data_dir = '/kaggle/input/plantdisease/PlantVillage'
-print("Classes:", os.listdir(data_dir))
-print("Samples per class:", {cls: len(os.listdir(os.path.join(data_dir, cls))) for cls in os.listdir(data_dir)})
+data_dir = 'PlantVillage'
 batch_size = 32
-epochs = 10
+epochs = 1  # Changed to 1 for additional training
 learning_rate = 1e-3
 val_split = 0.2
 num_workers = 4
-
-# Device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f'Using device: {device}')
-
-# Data transforms
-transform = transforms.Compose([
-    transforms.Resize((128, 128)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225])
-])
-
-# Dataset and split
-full_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
-num_classes = len(full_dataset.classes)
-
-val_size = int(len(full_dataset) * val_split)
-train_size = len(full_dataset) - val_size
-train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
-
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
 # Define a simple CNN
 class PlantDiseaseCNN(nn.Module):
@@ -69,12 +44,6 @@ class PlantDiseaseCNN(nn.Module):
         x = self.classifier(x)
         return x
 
-# Initialize model, loss, optimizer
-model = PlantDiseaseCNN(num_classes).to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-# Training and validation loops
 def train_one_epoch(loader, model, criterion, optimizer, device):
     model.train()
     running_loss = 0.0
@@ -97,7 +66,6 @@ def train_one_epoch(loader, model, criterion, optimizer, device):
     epoch_acc = correct / total
     return epoch_loss, epoch_acc
 
-
 def validate(loader, model, criterion, device):
     model.eval()
     running_loss = 0.0
@@ -118,20 +86,69 @@ def validate(loader, model, criterion, device):
     epoch_acc = correct / total
     return epoch_loss, epoch_acc
 
-# Training loop
-best_val_acc = 0.0
-for epoch in range(1, epochs + 1):
-    train_loss, train_acc = train_one_epoch(train_loader, model, criterion, optimizer, device)
-    val_loss, val_acc = validate(val_loader, model, criterion, device)
+def main():
+    # Device
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    print(f'Using device: {device}')
 
-    print(f'Epoch {epoch}/{epochs}:'
-          f' Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}'
-          f' | Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}')
+    # Data transforms
+    transform = transforms.Compose([
+        transforms.Resize((128, 128)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                           std=[0.229, 0.224, 0.225])
+    ])
 
-    # Save best model
-    if val_acc > best_val_acc:
-        best_val_acc = val_acc
-        torch.save(model.state_dict(), 'plant_model.pth')
-        print('Best model saved')
+    # Dataset and split
+    classes = [cls for cls in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, cls))]
+    print("Classes:", classes)
+    print("Samples per class:", {cls: len(os.listdir(os.path.join(data_dir, cls))) for cls in classes})
 
-print('Training complete. Best Val Acc: {:.4f}'.format(best_val_acc))
+    full_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
+    num_classes = len(full_dataset.classes)
+
+    val_size = int(len(full_dataset) * val_split)
+    train_size = len(full_dataset) - val_size
+    train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    # Initialize model, loss, optimizer
+    model = PlantDiseaseCNN(num_classes).to(device)
+
+    # Load the existing model
+    try:
+        model.load_state_dict(torch.load('plant_model_improved.pth'))
+        print("Successfully loaded existing model")
+    except:
+        print("No existing model found, starting from scratch")
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Training loop
+    best_val_acc = 0.0
+    for epoch in range(1, epochs + 1):
+        train_loss, train_acc = train_one_epoch(train_loader, model, criterion, optimizer, device)
+        val_loss, val_acc = validate(val_loader, model, criterion, device)
+
+        print(f'Epoch {epoch}/{epochs}:'
+              f' Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}'
+              f' | Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}')
+
+        # Save best model
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            torch.save(model.state_dict(), 'plant_model_improved.pth')
+            print('Improved model saved as plant_model_improved.pth')
+
+    print('Additional training complete. Best Val Acc: {:.4f}'.format(best_val_acc))
+
+if __name__ == "__main__":
+    main()

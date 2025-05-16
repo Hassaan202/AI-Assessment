@@ -169,7 +169,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = PlantDiseaseCNN(len(class_names))
 
 # For Vercel deployment, we need to handle the model path correctly
-model_path = os.path.join(os.path.dirname(__file__), 'plant_model.pth')
+model_path = os.path.join(os.path.dirname(__file__), 'plant_model_improved.pth')
 try:
     model.load_state_dict(torch.load(model_path, map_location=device))
     print(f"Model loaded successfully from {model_path}")
