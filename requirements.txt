@@ -1,8 +1,10 @@
 flask==2.0.1
---find-links https://download.pytorch.org/whl/torch_stable.html
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.2.0+cpu
 torchvision==0.17.0+cpu
 pillow==9.5.0
 numpy==1.24.3
 python-dotenv==1.0.0
 google-generativeai==0.3.2
+setuptools>=65.5.1
+wheel>=0.38.0
