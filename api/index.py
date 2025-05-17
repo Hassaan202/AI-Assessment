@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, Response
 import os
 import json
 import base64
@@ -83,8 +83,13 @@ def get_mock_prediction(image_bytes):
     except Exception as e:
         return {'error': str(e)}
 
-@app.route('/', methods=['GET'])
-def index():
+# Modified routes for serverless setup
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    return get_index()
+
+def get_index():
     html_content = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -237,7 +242,7 @@ def index():
                 results.style.display = 'none';
                 
                 // Send request to server
-                fetch('/predict', {
+                fetch('/api/predict', {
                     method: 'POST',
                     body: formData
                 })
@@ -324,9 +329,9 @@ def index():
     </script>
 </body>
 </html>"""
-    return html_content
+    return Response(html_content, mimetype='text/html')
 
-@app.route('/predict', methods=['POST'])
+@app.route('/api/predict', methods=['POST'])
 def predict():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'})
@@ -338,18 +343,6 @@ def predict():
     img_bytes = file.read()
     prediction = get_mock_prediction(img_bytes)
     return jsonify(prediction)
-
-@app.route('/api/predict', methods=['POST'])
-def api_predict():
-    if not request.json or 'image' not in request.json:
-        return jsonify({'error': 'No image data'})
-    
-    try:
-        img_data = base64.b64decode(request.json['image'])
-        prediction = get_mock_prediction(img_data)
-        return jsonify(prediction)
-    except Exception as e:
-        return jsonify({'error': str(e)})
 
 @app.route('/api/disease-info', methods=['POST'])
 def disease_info():
@@ -364,3 +357,7 @@ def disease_info():
         except Exception:
             info = {"description": "Error parsing response", "symptoms": "", "treatment": ""}
     return jsonify(info)
+
+# This is needed for Vercel serverless functions
+if __name__ == '__main__':
+    app.run(debug=True)
