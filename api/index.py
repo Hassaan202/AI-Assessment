@@ -1,5 +1,5 @@
-import os
 from flask import Flask, request, jsonify, render_template, Response
+import os
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
@@ -80,7 +80,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = PlantDiseaseCNN(len(class_names))
 
 # For Vercel deployment, adjust the model path
-model_path = os.path.join(os.path.dirname(__file__), 'plant_model_improved.pth')
+model_path = os.path.join(os.path.dirname(__file__), '../plant_model_improved.pth')
 try:
     model.load_state_dict(torch.load(model_path, map_location=device))
     print(f"Model loaded successfully from {model_path}")
@@ -223,11 +223,5 @@ def disease_info():
             info = {"description": "Error parsing response", "symptoms": "", "treatment": ""}
     return jsonify(info)
 
-# Vercel serverless function handler
-@app.route('/<path:path>')
-def catch_all(path):
-    return app.send_static_file(path)
-
-# For local development
-if __name__ == '__main__':
-    app.run(debug=True)
+# Create app instance for Vercel
+app = app
