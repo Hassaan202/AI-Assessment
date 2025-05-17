@@ -1,15 +1,11 @@
 from flask import Flask, request, jsonify, render_template, Response
 import os
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
-from PIL import Image
+import json
 import base64
 import io
-import google.generativeai as genai
-import json
+from PIL import Image
 from dotenv import load_dotenv
-import sys
+import google.generativeai as genai
 
 # Create Flask app
 app = Flask(__name__)
@@ -25,38 +21,7 @@ if api_key:
 else:
     print("Warning: GOOGLE_API_KEY not found in environment variables!")
 
-# Define the CNN architecture
-class PlantDiseaseCNN(nn.Module):
-    def __init__(self, num_classes):
-        super(PlantDiseaseCNN, self).__init__()
-        self.features = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, 2),
-            
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, 2),
-            
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, 2)
-        )
-        self.classifier = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(128 * 16 * 16, 256),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
-            nn.Linear(256, num_classes)
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
-        return x
-
-# Class labels
+# Simplified class names for demo purposes
 class_names = [
     'Pepper__bell___Bacterial_spot',
     'Potato___healthy',
@@ -74,29 +39,6 @@ class_names = [
     'Potato___Early_blight',
     'Tomato__Tomato_mosaic_virus'
 ]
-
-# Load model
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = PlantDiseaseCNN(len(class_names))
-
-# For Vercel deployment, adjust the model path
-model_path = os.path.join(os.path.dirname(__file__), '../plant_model_improved.pth')
-try:
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    print(f"Model loaded successfully from {model_path}")
-except Exception as e:
-    print(f"Error loading model: {str(e)}")
-    # Don't exit as this would stop the serverless function
-
-model.eval()
-
-# Image transformation
-transform = transforms.Compose([
-    transforms.Resize((128, 128)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225])
-])
 
 def get_disease_info(disease_name):
     if not api_key:
@@ -156,27 +98,52 @@ def get_disease_info(disease_name):
         }
         return json.dumps(error_response)
 
-def get_prediction(image_bytes):
+def get_mock_prediction(image_bytes):
+    """Mock prediction function that returns a placeholder response"""
     try:
-        image = Image.open(io.BytesIO(image_bytes)).convert('RGB')  # Ensure RGB format
-        image = transform(image).unsqueeze(0).to(device)
+        # Just open the image to verify it's valid, but don't use a model
+        image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
         
-        with torch.no_grad():
-            outputs = model(image)
-            _, predicted = torch.max(outputs, 1)
-            probs = torch.nn.functional.softmax(outputs, dim=1)[0]
+        # Return a simulated prediction with random data
+        import random
+        
+        # Pick a random class for demo
+        random_class_index = random.randint(0, len(class_names) - 1)
+        primary_class = class_names[random_class_index]
+        
+        # Create random confidence values
+        primary_confidence = random.uniform(70.0, 95.0)
+        
+        # Create random top predictions
+        indices = list(range(len(class_names)))
+        random.shuffle(indices)
+        top_indices = indices[:5]  # Take 5 random indices
+        
+        # Ensure our primary prediction is included
+        if random_class_index not in top_indices:
+            top_indices[0] = random_class_index
             
+        # Create confidences for top predictions
+        confidences = [random.uniform(20.0, 95.0) for _ in top_indices]
+        
+        # Ensure primary class has highest confidence
+        max_confidence = max(confidences)
+        primary_index = top_indices.index(random_class_index)
+        confidences[primary_index] = max(max_confidence, primary_confidence)
+        
+        # Sort by confidence
+        predictions = sorted(
+            [{'class': class_names[idx], 'confidence': conf} for idx, conf in zip(top_indices, confidences)],
+            key=lambda x: x['confidence'],
+            reverse=True
+        )
+        
         return {
-            'class': class_names[predicted.item()],
-            'confidence': probs[predicted].item() * 100,
-            'top_predictions': [
-                {
-                    'class': class_names[i],
-                    'confidence': probs[i].item() * 100
-                }
-                for i in torch.topk(probs, min(5, len(class_names))).indices.tolist()
-            ]
+            'class': primary_class,
+            'confidence': primary_confidence,
+            'top_predictions': predictions
         }
+        
     except Exception as e:
         return {'error': str(e)}
 
@@ -194,7 +161,7 @@ def predict():
         return jsonify({'error': 'No selected file'})
     
     img_bytes = file.read()
-    prediction = get_prediction(img_bytes)
+    prediction = get_mock_prediction(img_bytes)
     return jsonify(prediction)
 
 @app.route('/api/predict', methods=['POST'])
@@ -204,7 +171,7 @@ def api_predict():
     
     try:
         img_data = base64.b64decode(request.json['image'])
-        prediction = get_prediction(img_data)
+        prediction = get_mock_prediction(img_data)
         return jsonify(prediction)
     except Exception as e:
         return jsonify({'error': str(e)})
